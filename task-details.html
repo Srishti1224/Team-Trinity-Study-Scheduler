@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Details</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #1a1a1a;
+      overflow: hidden;
+      position: relative;
+    }
+
+    video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+    }
+
+    .task-details {
+      padding: 20px;
+      border-radius: 8px;
+      background-color: rgba(42, 42, 42, 0.9);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      width: 80%;
+      max-width: 600px;
+      z-index: 1;
+    }
+
+    .task-details h2 {
+      color: #ffc107;
+      border-bottom: 2px solid #ffc107;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    .subtasks h3 {
+      background-color: #ffc107;
+      color: #000;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .subtasks ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 10px;
+    }
+
+    .subtasks li {
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #333;
+      border: 1px solid #444;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .subtask-checkbox {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    .subtask-checkbox:checked {
+      background-color: #ffc107;
+      border-color: #ffc107;
+    }
+
+    .progress-bar-container {
+      margin-top: 20px;
+      background-color: #444;
+      border-radius: 10px;
+      height: 20px;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: #ffc107;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      color: #fff;
+      font-weight: bold;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .add-subtask {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      background-color: #333;
+      border: 2px solid #ffc107;
+      border-radius: 5px;
+      padding: 10px;
+    }
+
+    .add-subtask input {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      background-color: #444;
+      color: white;
+    }
+
+    .add-subtask button {
+      padding: 10px 15px;
+      background-color: #ffc107;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .add-subtask button:hover {
+      background-color: #e0a800;
+    }
+
+    .clear-btn {
+      margin-top: 20px;
+      padding: 10px 15px;
+      background-color: #e0a800;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+      width: 100%;
+    }
+
+    .clear-btn:hover {
+      background-color: #b18501;
+    }
+  </style>
+</head>
+<body>
+  <video autoplay muted loop>
+    <source src="c:\Users\Admin\Documents\study schedule.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+
+  <div class="task-details">
+    <h2 id="task-title">Task Title</h2>
+
+    <div class="add-subtask">
+      <input type="text" id="new-subtask" placeholder="Add a new subtask...">
+      <button id="add-subtask-btn">Add</button>
+    </div>
+
+    <div class="subtasks">
+      <h3>Subtasks</h3>
+      <ul id="subtasks-list"></ul>
+    </div>
+
+    <div class="progress-bar-container">
+      <div class="progress-bar"></div>
+      <div class="progress-text">0%</div>
+    </div>
+
+    <button class="clear-btn" id="clear-all-btn">Clear All Subtasks</button>
+  </div>
+
+  <script>
+    const taskId = 1;
+    const taskKey = `task_${taskId}_subtasks`;
+
+    const subtasksList = document.getElementById("subtasks-list");
+    const newSubtaskInput = document.getElementById("new-subtask");
+    const addSubtaskBtn = document.getElementById("add-subtask-btn");
+    const clearAllBtn = document.getElementById("clear-all-btn");
+    const progressBar = document.querySelector(".progress-bar");
+    const progressText = document.querySelector(".progress-text");
+
+    const loadSubtasks = () => {
+      const storedSubtasks = JSON.parse(localStorage.getItem(taskKey)) || [];
+      storedSubtasks.forEach(subtask => addSubtaskToList(subtask));
+      updateProgress();
+    };
+
+    const saveSubtasks = () => {
+      const subtasks = Array.from(subtasksList.children).map(li => ({
+        text: li.querySelector("span").textContent,
+        completed: li.querySelector(".subtask-checkbox").checked,
+      }));
+      localStorage.setItem(taskKey, JSON.stringify(subtasks));
+    };
+
+    const addSubtaskToList = (subtask) => {
+      const listItem = document.createElement("li");
+      listItem.innerHTML = `
+        <div class="details">
+          <input type="checkbox" class="subtask-checkbox" ${subtask.completed ? "checked" : ""}>
+          <span>${subtask.text}</span>
+        </div>
+      `;
+      listItem.querySelector(".subtask-checkbox").addEventListener("change", () => {
+        updateProgress();
+        saveSubtasks();
+      });
+      subtasksList.appendChild(listItem);
+    };
+
+    const updateProgress = () => {
+      const total = subtasksList.children.length;
+      const completed = Array.from(subtasksList.children).filter(li =>
+        li.querySelector(".subtask-checkbox").checked
+      ).length;
+      const percentage = total ? Math.round((completed / total) * 100) : 0;
+      progressBar.style.width = `${percentage}%`;
+      progressText.textContent = `${percentage}%`;
+    };
+
+    addSubtaskBtn.addEventListener("click", () => {
+      const newSubtaskText = newSubtaskInput.value.trim();
+      if (newSubtaskText) {
+        addSubtaskToList({ text: newSubtaskText, completed: false });
+        newSubtaskInput.value = "";
+        saveSubtasks();
+        updateProgress();
+      }
+    });
+
+    clearAllBtn.addEventListener("click", () => {
+      subtasksList.innerHTML = "";
+      localStorage.removeItem(taskKey);
+      updateProgress();
+    });
+
+    loadSubtasks();
+  </script>
+</body>
+</html>
